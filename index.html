@@ -1,0 +1,878 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Sashimi">
+<meta name="theme-color" content="#131d15">
+<link rel="manifest" href="manifest.json">
+<link rel="apple-touch-icon" id="ati" href="">
+<title>Sashimi Log</title>
+<style>
+  :root{
+    --bg:#131d15;
+    --panel:#1b2b1d;
+    --panel-2:#223325;
+    --line:#2d4432;
+    --ink:#e3e8d2;
+    --ink-dim:#8aaa8e;
+    --ink-faint:#587060;
+    --green:#c5d98a;
+    --green-soft:#243022;
+    --up:#7dbe65;
+    --down:#d07060;
+    --mono:ui-monospace,"SF Mono",Menlo,Consolas,monospace;
+    --sans:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;
+  }
+  *{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+  html,body{margin:0;padding:0}
+  body{
+    background:var(--bg);color:var(--ink);font-family:var(--sans);
+    font-size:16px;line-height:1.45;
+    padding-bottom:calc(72px + env(safe-area-inset-bottom));
+    -webkit-font-smoothing:antialiased;
+  }
+  header{
+    padding:calc(16px + env(safe-area-inset-top)) 18px 12px;
+    border-bottom:1px solid var(--line);
+    display:flex;align-items:baseline;justify-content:space-between;gap:10px;
+  }
+  header h1{font-size:15px;font-weight:600;letter-spacing:.16em;text-transform:uppercase;margin:0;color:var(--ink)}
+  .meta{font-family:var(--mono);font-size:11px;color:var(--ink-faint);letter-spacing:.05em}
+  main{padding:14px 14px 24px;max-width:680px;margin:0 auto}
+
+  nav{
+    position:fixed;left:0;right:0;bottom:0;z-index:20;
+    background:rgba(19,29,21,.94);backdrop-filter:saturate(140%) blur(10px);
+    border-top:1px solid var(--line);
+    display:flex;padding:6px 6px calc(6px + env(safe-area-inset-bottom));
+  }
+  nav button{
+    flex:1;background:none;border:0;color:var(--ink-faint);
+    font-family:var(--sans);font-size:11px;font-weight:600;letter-spacing:.08em;
+    text-transform:uppercase;padding:10px 4px 8px;cursor:pointer;
+    border-radius:8px;transition:color .15s;
+  }
+  nav button .ico{display:block;font-size:18px;margin-bottom:3px;line-height:1}
+  nav button.active{color:var(--green)}
+
+  .view{display:none}
+  .view.active{display:block}
+
+  .seg{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:10px}
+  .seg button{
+    background:var(--panel);border:1px solid var(--line);color:var(--ink-dim);
+    font-family:var(--sans);font-size:13px;font-weight:600;letter-spacing:.04em;
+    padding:12px 8px;border-radius:10px;cursor:pointer;transition:.15s;
+  }
+  .seg button.active{border-color:var(--green);color:var(--green);background:var(--green-soft)}
+
+  .card{background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:14px;margin-bottom:10px}
+  .ex-head{display:flex;justify-content:space-between;align-items:baseline;gap:8px;margin-bottom:6px}
+  .ex-name{font-size:15px;font-weight:600;letter-spacing:.01em}
+  .ex-scheme{font-family:var(--mono);font-size:11px;color:var(--ink-faint);white-space:nowrap}
+  .ex-last{font-family:var(--mono);font-size:11px;color:var(--ink-dim);margin-bottom:10px;line-height:1.5}
+  .ex-last b{color:var(--green);font-weight:600}
+
+  /* set rows */
+  .set-row{display:grid;grid-template-columns:18px 1fr 1fr;gap:8px;align-items:end;margin-bottom:8px}
+  .set-row:last-child{margin-bottom:0}
+  .set-lbl{font-family:var(--mono);font-size:10px;color:var(--ink-faint);letter-spacing:.06em;padding-bottom:13px;text-align:center}
+  .field label{display:block;font-size:10px;letter-spacing:.12em;text-transform:uppercase;color:var(--ink-faint);margin-bottom:4px;font-weight:600}
+  .field input,.field-input{
+    width:100%;background:var(--panel-2);border:1px solid var(--line);
+    border-radius:8px;color:var(--ink);font-family:var(--mono);font-size:18px;
+    padding:10px 12px;text-align:center;-moz-appearance:textfield;
+  }
+  .field input::-webkit-outer-spin-button,.field input::-webkit-inner-spin-button{-webkit-appearance:none;margin:0}
+  .field input:focus,.field-input:focus{outline:none;border-color:var(--green)}
+  .field-input{font-family:var(--sans);font-size:14px;text-align:left}
+  .set-deltas{font-family:var(--mono);font-size:10px;margin-top:6px;min-height:13px;letter-spacing:.02em;display:flex;gap:10px;flex-wrap:wrap}
+  .set-deltas .up{color:var(--up)} .set-deltas .down{color:var(--down)} .set-deltas .flat{color:var(--ink-faint)}
+
+  /* edit mode */
+  .edit-row{display:flex;gap:8px;align-items:center;margin-bottom:10px}
+  .edit-name-input{flex:1;background:var(--panel-2);border:1px solid var(--line);border-radius:8px;color:var(--ink);font-family:var(--sans);font-size:14px;font-weight:600;padding:9px 12px}
+  .edit-name-input:focus{outline:none;border-color:var(--green)}
+  .edit-scheme-input{width:86px;background:var(--panel-2);border:1px solid var(--line);border-radius:8px;color:var(--ink-dim);font-family:var(--mono);font-size:12px;padding:9px 8px;text-align:center}
+  .edit-scheme-input:focus{outline:none;border-color:var(--green)}
+  .remove-ex{background:none;border:1px solid var(--line);color:var(--ink-faint);border-radius:8px;font-size:15px;cursor:pointer;padding:7px 10px;flex-shrink:0;line-height:1}
+  .remove-ex:active{border-color:var(--down);color:var(--down)}
+  .edit-defaults{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+  .edit-bar{display:flex;gap:8px;margin-bottom:12px}
+  .edit-bar .btn{margin-top:0;font-size:13px;padding:11px}
+
+  .btn{
+    width:100%;background:var(--green);color:#131d15;border:0;border-radius:11px;
+    font-family:var(--sans);font-size:15px;font-weight:700;letter-spacing:.03em;
+    padding:15px;cursor:pointer;margin-top:6px;
+  }
+  .btn:active{transform:translateY(1px)}
+  .btn.ghost{background:none;border:1px solid var(--line);color:var(--ink-dim);font-weight:600}
+  .btn.danger{background:none;border:1px solid var(--down);color:var(--down);font-weight:600}
+
+  .datebar{
+    display:flex;align-items:center;gap:8px;margin-bottom:14px;
+    font-family:var(--mono);font-size:12px;color:var(--ink-dim);
+  }
+  .datebar input{
+    background:var(--panel-2);border:1px solid var(--line);color:var(--ink);
+    font-family:var(--mono);font-size:12px;border-radius:8px;padding:7px 9px;
+  }
+
+  .picker{
+    width:100%;background:var(--panel-2);border:1px solid var(--line);color:var(--ink);
+    font-family:var(--sans);font-size:14px;border-radius:10px;padding:12px;margin-bottom:14px;
+  }
+  .stat-row{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-bottom:12px}
+  .stat{background:var(--panel-2);border:1px solid var(--line);border-radius:10px;padding:10px 8px;text-align:center}
+  .stat .k{font-size:9px;letter-spacing:.12em;text-transform:uppercase;color:var(--ink-faint);font-weight:600}
+  .stat .v{font-family:var(--mono);font-size:18px;color:var(--ink);margin-top:3px}
+  .stat .v small{font-size:11px;color:var(--ink-dim)}
+
+  svg.spark{width:100%;height:90px;display:block;background:var(--panel-2);border:1px solid var(--line);border-radius:10px;margin-bottom:12px}
+
+  .hist{list-style:none;margin:0;padding:0}
+  .hist li{padding:11px 12px;border:1px solid var(--line);border-radius:9px;margin-bottom:6px;background:var(--panel)}
+  .hist-head{display:flex;justify-content:space-between;align-items:center;margin-bottom:4px}
+  .hist .when{font-family:var(--mono);font-size:11px;color:var(--ink-faint)}
+  .hist .d{font-family:var(--mono);font-size:11px}
+  .hist .d.up{color:var(--up)} .hist .d.down{color:var(--down)} .hist .d.flat{color:var(--ink-faint)}
+  .hist .sets-summary{font-family:var(--mono);font-size:13px;color:var(--ink);display:flex;gap:10px;flex-wrap:wrap}
+  .hist .sets-summary span b{color:var(--green);font-weight:600}
+  .hist .tod{font-size:10px;color:var(--ink-faint);text-transform:uppercase;letter-spacing:.08em}
+  .hist .load{font-family:var(--mono);font-size:15px;color:var(--ink)}
+  .hist .load b{color:var(--green);font-weight:600}
+  .del{background:none;border:0;color:var(--ink-faint);font-size:16px;cursor:pointer;padding:4px 6px}
+
+  .empty{color:var(--ink-faint);font-size:13px;text-align:center;padding:30px 10px;line-height:1.6}
+
+  .toast{
+    position:fixed;left:50%;bottom:calc(84px + env(safe-area-inset-bottom));transform:translateX(-50%);
+    background:var(--ink);color:#131d15;font-size:13px;font-weight:600;
+    padding:10px 18px;border-radius:20px;opacity:0;transition:opacity .2s;z-index:40;pointer-events:none;
+    white-space:nowrap;
+  }
+  .toast.show{opacity:1}
+
+  .outfit-chips{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin-top:10px}
+  .outfit-chip{
+    background:var(--panel-2);border:2px solid var(--line);color:var(--ink-faint);
+    font-family:var(--sans);font-size:12px;font-weight:600;letter-spacing:.03em;
+    padding:10px 4px;border-radius:9px;cursor:pointer;transition:.15s;text-align:center;
+  }
+  .outfit-chip.selected{color:#131d15}
+  .outfit-pip{display:inline-block;width:8px;height:8px;border-radius:50%;flex-shrink:0;margin-right:4px;vertical-align:middle}
+
+  /* muscle group filter */
+  .mg-filter{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:10px}
+  .mg-chip{
+    background:var(--panel);border:1px solid var(--line);color:var(--ink-faint);
+    font-family:var(--sans);font-size:11px;font-weight:600;letter-spacing:.06em;
+    text-transform:uppercase;padding:7px 10px;border-radius:8px;cursor:pointer;
+    transition:.15s;white-space:nowrap;
+  }
+  .mg-chip.active{border-color:var(--green);color:var(--green);background:var(--green-soft)}
+
+  .tools{display:flex;gap:8px;margin-top:18px}
+  .tools .btn{margin-top:0}
+  h2.sec{font-size:11px;letter-spacing:.14em;text-transform:uppercase;color:var(--ink-faint);font-weight:600;margin:22px 4px 10px}
+</style>
+</head>
+<body>
+
+<header>
+  <h1>Sashimi Log</h1>
+  <span class="meta" id="clock"></span>
+</header>
+
+<main>
+  <!-- TRAIN -->
+  <section class="view active" id="view-train">
+    <div class="datebar">
+      <span>Session</span>
+      <input type="datetime-local" id="train-date">
+    </div>
+    <div class="seg" id="day-seg"></div>
+    <div class="edit-bar">
+      <button class="btn ghost" id="edit-toggle" style="font-size:13px;padding:11px;margin-top:0;display:flex;align-items:center;justify-content:center;gap:7px">
+        <svg width="13" height="13" viewBox="0 0 13 13" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M8.5 1.5L11.5 4.5L4.5 11.5H1.5V8.5L8.5 1.5Z" stroke="currentColor" stroke-width="1.4" stroke-linejoin="round"/><path d="M7 3L10 6" stroke="currentColor" stroke-width="1.4"/></svg>
+        Edit exercises
+      </button>
+    </div>
+    <div id="train-list"></div>
+    <button class="btn" id="save-session">Log session</button>
+  </section>
+
+  <!-- PROGRESS -->
+  <section class="view" id="view-progress">
+    <div class="mg-filter" id="mg-filter"></div>
+    <select class="picker" id="ex-picker"></select>
+    <div id="progress-body"></div>
+  </section>
+
+  <!-- BODY -->
+  <section class="view" id="view-body">
+    <div class="card">
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">
+        <div class="field">
+          <label>Weight (kg)</label>
+          <input type="number" inputmode="decimal" id="bw-kg" placeholder="—">
+        </div>
+        <div class="field">
+          <label>Time of day</label>
+          <select class="picker" id="bw-tod" style="margin:0;padding:11px;font-family:var(--mono);font-size:15px;text-align:center">
+            <option>Morning</option><option>Midday</option><option>Evening</option><option>Night</option>
+          </select>
+        </div>
+      </div>
+      <div class="outfit-chips" id="phase-chips">
+        <button class="outfit-chip" data-phase="Period">Period</button>
+        <button class="outfit-chip" data-phase="Follicular">Follicular</button>
+        <button class="outfit-chip" data-phase="Ovulation">Ovulation</button>
+        <button class="outfit-chip" data-phase="Luteal">Luteal</button>
+      </div>
+      <div class="datebar" style="margin:12px 0 0">
+        <span>When</span><input type="datetime-local" id="bw-date">
+      </div>
+      <button class="btn" id="save-bw" style="margin-top:14px">Log weight</button>
+    </div>
+    <div class="stat-row" id="bw-stats"></div>
+    <svg class="spark" id="bw-spark" viewBox="0 0 300 90" preserveAspectRatio="none"></svg>
+    <h2 class="sec">History</h2>
+    <ul class="hist" id="bw-hist"></ul>
+  </section>
+
+  <div class="tools">
+    <button class="btn ghost" id="export-btn">Download backup</button>
+    <button class="btn ghost" id="import-btn">Restore backup</button>
+  </div>
+  <input type="file" id="import-file" accept="application/json" hidden>
+</main>
+
+<nav>
+  <button class="active" data-view="train"><span class="ico">▦</span>Train</button>
+  <button data-view="progress"><span class="ico">↗</span>Progress</button>
+  <button data-view="body"><span class="ico">◷</span>Body</button>
+</nav>
+
+<div class="toast" id="toast"></div>
+
+<script>
+/* ── storage ── */
+const K_LOGS="sash_logs_v1", K_BW="sash_bw_v1", K_SEED="sash_seeded_v1", K_ROUTINE="sash_routine_v1";
+const load=(k,f)=>{try{return JSON.parse(localStorage.getItem(k))??f}catch{return f}};
+const save=(k,v)=>localStorage.setItem(k,JSON.stringify(v));
+let logs=load(K_LOGS,[]);
+let bw=load(K_BW,[]);
+
+const PHASES={Period:"#c94b4b",Follicular:"#e07fa0",Ovulation:"#e3b13c",Luteal:"#9b7fd4"};
+const phaseColor=p=>PHASES[p]||"#646a72";
+
+/* ── muscle groups ── */
+const MUSCLE_GROUPS=["Quads","Hamstrings","Glutes","Calves","Core","Chest","Back","Shoulders"];
+
+/* ── default routine ── */
+// Format: [name, scheme, defaultKg, defaultReps, muscleGroup]
+const DEFAULT_ROUTINE={
+  "Lower A":[
+    ["Leg Press","2×6–10","","","Quads"],
+    ["Leg Extension","2×8–13","","","Quads"],
+    ["Seated Hamstring Curl","2×8–13","","","Hamstrings"],
+    ["Hip Thrust Machine","2×6–10","","","Glutes"],
+    ["Abductor Machine","2×10–13","","","Glutes"],
+    ["Calf Raise","3×10–13","","","Calves"],
+    ["Ab Machine","2×10–13","","","Core"],
+  ],
+  "Upper A":[
+    ["Chest Press Machine","2×6–10","","","Chest"],
+    ["Lat Pulldown","2×6–10","","","Back"],
+    ["Seated Row Machine","2×8–10","","","Back"],
+    ["Shoulder Press Machine","2×8–10","","","Shoulders"],
+  ],
+  "Lower B":[
+    ["Hack Squat","2×6–10","","","Quads"],
+    ["Lying or Seated Hamstring Curl","2×8–13","","","Hamstrings"],
+    ["Leg Extension","2×8–13","","","Quads"],
+    ["Cable Kickback or Glute Drive Machine","2×8–13","","","Glutes"],
+    ["Abductor Machine","2×10–13","","","Glutes"],
+    ["Calf Raise","3×10–13","","","Calves"],
+    ["Ab Machine","2×10–13","","","Core"],
+  ],
+  "Upper B":[
+    ["Pec Deck","2×8–10","","","Chest"],
+    ["Close-Grip / Assisted Pulldown","2×6–10","","","Back"],
+    ["Chest-Supported Row Machine","2×8–10","","","Back"],
+    ["Lateral Raise","2×10–13","","","Shoulders"],
+  ],
+};
+
+let ROUTINE=load(K_ROUTINE,null)||JSON.parse(JSON.stringify(DEFAULT_ROUTINE));
+function saveRoutine(){save(K_ROUTINE,ROUTINE);}
+
+const exId=(w,name)=>w+"::"+name;
+
+/* ── helpers ── */
+const $=s=>document.querySelector(s);
+const e1rm=(kg,reps)=>kg>0&&reps>0?kg*(1+reps/30):0;
+const fmt=n=>Number.isFinite(n)?(Math.round(n*10)/10).toString():"–";
+const parseSets=sch=>Math.max(1,parseInt(sch)||1);
+
+function nowLocalISO(d=new Date()){
+  const p=x=>String(x).padStart(2,"0");
+  return `${d.getFullYear()}-${p(d.getMonth()+1)}-${p(d.getDate())}T${p(d.getHours())}:${p(d.getMinutes())}`;
+}
+function todFromDate(d){const h=d.getHours();return h<11?"Morning":h<15?"Midday":h<20?"Evening":"Night";}
+function shortDate(ts){
+  const d=new Date(ts);
+  return d.toLocaleDateString(undefined,{day:"2-digit",month:"short"})+" "+d.toLocaleTimeString(undefined,{hour:"2-digit",minute:"2-digit"});
+}
+function toast(m){const t=$("#toast");t.textContent=m;t.classList.add("show");clearTimeout(t._h);t._h=setTimeout(()=>t.classList.remove("show"),1800);}
+
+function lastSessionSets(id){
+  const all=logs.filter(l=>l.exId===id);
+  if(!all.length)return null;
+  const lastTs=Math.max(...all.map(e=>e.ts));
+  return all.filter(e=>e.ts===lastTs).sort((a,b)=>(a.set||1)-(b.set||1));
+}
+function sessionGroups(id){
+  const map={};
+  logs.filter(l=>l.exId===id).forEach(e=>{(map[e.ts]=map[e.ts]||[]).push(e);});
+  return Object.entries(map).sort(([a],[b])=>+a-+b).map(([,sets])=>sets.sort((a,b)=>(a.set||1)-(b.set||1)));
+}
+function bestSet(group){return group.reduce((b,e)=>e1rm(e.kg,e.reps)>e1rm(b.kg,b.reps)?e:b);}
+
+/* ── seed baseline once (no-op — Sash enters her own data) ── */
+if(!localStorage.getItem(K_SEED)){
+  const t=Date.now();
+  for(const w in ROUTINE){
+    for(const [name,sch,kg,reps] of ROUTINE[w]){
+      if(kg!==""&&reps!==""){
+        const ns=parseSets(sch);
+        for(let s=1;s<=ns;s++)
+          logs.push({id:t+Math.random(),ts:t,workout:w,exId:exId(w,name),exName:name,kg:+kg,reps:+reps,set:s});
+      }
+    }
+  }
+  save(K_LOGS,logs);localStorage.setItem(K_SEED,"1");
+}
+
+/* ── nav ── */
+let day=Object.keys(ROUTINE)[0];
+document.querySelectorAll("nav button").forEach(b=>b.onclick=()=>{
+  document.querySelectorAll("nav button").forEach(x=>x.classList.remove("active"));
+  b.classList.add("active");
+  document.querySelectorAll(".view").forEach(v=>v.classList.remove("active"));
+  $("#view-"+b.dataset.view).classList.add("active");
+  if(b.dataset.view==="progress"){renderMgFilter();renderProgress();}
+  if(b.dataset.view==="body")renderBody();
+});
+
+/* ── TRAIN ── */
+let editMode=false;
+const editToggle=$("#edit-toggle");
+const saveSessionBtn=$("#save-session");
+
+editToggle.onclick=()=>{
+  editMode=!editMode;
+  editToggle.innerHTML=editMode
+    ?`<svg width="13" height="13" viewBox="0 0 13 13" fill="none"><path d="M2 6.5L5.5 10L11 3" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg> Done`
+    :`<svg width="13" height="13" viewBox="0 0 13 13" fill="none"><path d="M8.5 1.5L11.5 4.5L4.5 11.5H1.5V8.5L8.5 1.5Z" stroke="currentColor" stroke-width="1.4" stroke-linejoin="round"/><path d="M7 3L10 6" stroke="currentColor" stroke-width="1.4"/></svg> Edit exercises`;
+  editToggle.classList.toggle("danger",editMode);
+  saveSessionBtn.style.display=editMode?"none":"";
+  renderDaySeg();
+  renderTrain();
+};
+
+function renameDay(oldName,newName){
+  const entries=Object.entries(ROUTINE);
+  const idx=entries.findIndex(([k])=>k===oldName);
+  if(idx===-1)return;
+  entries[idx]=[newName,entries[idx][1]];
+  ROUTINE=Object.fromEntries(entries);
+  if(day===oldName)day=newName;
+  saveRoutine();
+}
+
+function renderDaySeg(){
+  const seg=$("#day-seg");seg.innerHTML="";
+
+  if(editMode){
+    seg.style.gridTemplateColumns="1fr";
+
+    Object.keys(ROUTINE).forEach(w=>{
+      const row=document.createElement("div");
+      row.style.cssText="display:flex;gap:8px";
+
+      const inp=document.createElement("input");
+      inp.className="edit-name-input";
+      inp.style.cssText="flex:1;font-size:13px;padding:10px 12px";
+      inp.value=w;
+
+      const rmv=document.createElement("button");
+      rmv.className="remove-ex";
+      rmv.innerHTML=`<svg width="10" height="10" viewBox="0 0 10 10" fill="none"><path d="M1 1L9 9M9 1L1 9" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>`;
+      rmv.disabled=Object.keys(ROUTINE).length<=1;
+
+      let prev=w;
+      inp.onblur=()=>{
+        const nv=inp.value.trim();
+        if(!nv||nv===prev){inp.value=prev;return;}
+        if(ROUTINE[nv]!==undefined){inp.value=prev;toast("Name already used");return;}
+        renameDay(prev,nv);
+        prev=nv;
+      };
+
+      rmv.onclick=()=>{
+        if(Object.keys(ROUTINE).length<=1){toast("Need at least one day");return;}
+        const next=Object.keys(ROUTINE).find(d=>d!==w);
+        delete ROUTINE[w];
+        if(day===w)day=next;
+        saveRoutine();
+        renderDaySeg();
+        renderTrain();
+        if(typeof renderExPicker==="function")renderExPicker();
+        toast(`Removed ${w}`);
+      };
+
+      row.appendChild(inp);row.appendChild(rmv);
+      seg.appendChild(row);
+    });
+
+    const addBtn=document.createElement("button");
+    addBtn.className="btn ghost";
+    addBtn.style.cssText="margin-top:0;font-size:13px;padding:10px;display:flex;align-items:center;justify-content:center;gap:6px";
+    addBtn.innerHTML=`<svg width="13" height="13" viewBox="0 0 13 13" fill="none"><path d="M6.5 2V11M2 6.5H11" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg> Add day`;
+    addBtn.onclick=()=>{
+      let name="New Day";let i=2;
+      while(ROUTINE[name]!==undefined)name=`New Day ${i++}`;
+      ROUTINE[name]=[];
+      day=name;
+      saveRoutine();
+      renderDaySeg();
+      renderTrain();
+      renderExPicker();
+      toast(`Added ${name}`);
+    };
+    seg.appendChild(addBtn);
+    return;
+  }
+
+  seg.style.gridTemplateColumns="";
+  Object.keys(ROUTINE).forEach(w=>{
+    const b=document.createElement("button");
+    b.textContent=w;if(w===day)b.classList.add("active");
+    b.onclick=()=>{day=w;renderDaySeg();renderTrain();};
+    seg.appendChild(b);
+  });
+}
+
+function renderTrain(){
+  const list=$("#train-list");list.innerHTML="";
+  if(editMode){renderEditList(list);return;}
+
+  ROUTINE[day].forEach(([name,sch])=>{
+    const id=exId(day,name);
+    const ns=parseSets(sch);
+    const prev=lastSessionSets(id);
+    let lastLine="no history yet";
+    if(prev){
+      const setStr=prev.map(e=>`<b>${fmt(e.kg)}</b>×${e.reps}`).join(" · ");
+      lastLine=`last  ${setStr}  <span style="color:var(--ink-faint)">${shortDate(prev[0].ts)}</span>`;
+    }
+    const card=document.createElement("div");
+    card.className="card";card.dataset.ex=id;card.dataset.name=name;card.dataset.sets=ns;
+    let rowsHtml="";
+    for(let s=1;s<=ns;s++){
+      const p=prev?(prev.find(e=>(e.set||1)===s)||prev[prev.length-1]):null;
+      rowsHtml+=`
+        <div class="set-row" data-sn="${s}">
+          <div class="set-lbl">S${s}</div>
+          <div class="field">
+            ${s===1?'<label>kg</label>':''}
+            <input type="number" inputmode="decimal" class="in-kg" value="${p?fmt(p.kg):""}">
+          </div>
+          <div class="field">
+            ${s===1?'<label>reps</label>':''}
+            <input type="number" inputmode="numeric" class="in-reps" value="${p?p.reps:""}">
+          </div>
+        </div>`;
+    }
+    card.innerHTML=`
+      <div class="ex-head"><span class="ex-name">${name}</span><span class="ex-scheme">${sch}</span></div>
+      <div class="ex-last">${lastLine}</div>
+      ${rowsHtml}
+      <div class="set-deltas"></div>`;
+    const deltaDiv=card.querySelector(".set-deltas");
+    card.querySelectorAll(".set-row").forEach(row=>{
+      const sn=+row.dataset.sn;
+      const p=prev?(prev.find(e=>(e.set||1)===sn)||prev[prev.length-1]):null;
+      const kgI=row.querySelector(".in-kg"),repI=row.querySelector(".in-reps");
+      const upd=()=>{
+        const kg=parseFloat(kgI.value),reps=parseInt(repI.value);
+        deltaDiv.querySelectorAll(`[data-dsn="${sn}"]`).forEach(s=>s.remove());
+        if(!p||!(kg>0)||!(reps>0))return;
+        const de=e1rm(kg,reps)-e1rm(p.kg,p.reps);
+        const cls=de>0.05?"up":de<-0.05?"down":"flat";
+        const sign=x=>x>0?"+"+fmt(x):fmt(x);
+        const sp=document.createElement("span");
+        sp.className=cls;sp.dataset.dsn=sn;sp.textContent=`S${sn} ${sign(de)}`;
+        deltaDiv.appendChild(sp);
+      };
+      kgI.oninput=upd;repI.oninput=upd;
+    });
+    list.appendChild(card);
+  });
+}
+
+function renderEditList(list){
+  ROUTINE[day].forEach(([name,sch,defKg,defReps,defMg],idx)=>{
+    const mgOptions=MUSCLE_GROUPS.map(g=>`<option value="${g}"${(defMg||"")===g?" selected":""}>${g}</option>`).join("");
+    const card=document.createElement("div");
+    card.className="card";
+    card.innerHTML=`
+      <div class="edit-row">
+        <input class="edit-name-input" value="${name}" placeholder="Exercise name">
+        <input class="edit-scheme-input" value="${sch}" placeholder="2×8–12">
+        <button class="remove-ex" title="Remove">✕</button>
+      </div>
+      <div class="edit-defaults">
+        <div class="field"><label>default kg</label>
+          <input type="number" inputmode="decimal" class="in-kg" value="${defKg}" placeholder="—">
+        </div>
+        <div class="field"><label>default reps</label>
+          <input type="number" inputmode="numeric" class="in-reps" value="${defReps}" placeholder="—">
+        </div>
+      </div>
+      <div class="field" style="margin-top:8px">
+        <label>Muscle group</label>
+        <select class="in-mg picker" style="margin:0;padding:9px 12px;font-size:13px;margin-bottom:0">
+          <option value="">—</option>
+          ${mgOptions}
+        </select>
+      </div>`;
+
+    const nameI=card.querySelector(".edit-name-input");
+    const schI=card.querySelector(".edit-scheme-input");
+    const kgI=card.querySelector(".in-kg");
+    const repI=card.querySelector(".in-reps");
+    const mgI=card.querySelector(".in-mg");
+
+    const persist=()=>{
+      ROUTINE[day][idx]=[
+        nameI.value.trim()||name,
+        schI.value.trim()||sch,
+        parseFloat(kgI.value)||"",
+        parseInt(repI.value)||"",
+        mgI.value
+      ];
+      saveRoutine();
+    };
+    nameI.oninput=schI.oninput=kgI.oninput=repI.oninput=persist;
+    mgI.onchange=persist;
+
+    card.querySelector(".remove-ex").onclick=()=>{
+      if(ROUTINE[day].length<=1){toast("Need at least one exercise");return;}
+      ROUTINE[day].splice(idx,1);
+      saveRoutine();
+      renderTrain();
+      toast("Exercise removed");
+    };
+    list.appendChild(card);
+  });
+
+  /* Add exercise card */
+  const addMgOptions=MUSCLE_GROUPS.map(g=>`<option value="${g}">${g}</option>`).join("");
+  const addCard=document.createElement("div");
+  addCard.className="card";
+  addCard.style.borderStyle="dashed";
+  addCard.innerHTML=`
+    <div class="edit-row">
+      <input id="new-name" class="edit-name-input" placeholder="Exercise name">
+      <input id="new-scheme" class="edit-scheme-input" placeholder="2×8–12">
+    </div>
+    <div class="edit-defaults" style="margin-bottom:8px">
+      <div class="field"><label>default kg</label>
+        <input type="number" inputmode="decimal" id="new-kg" class="in-kg" placeholder="—">
+      </div>
+      <div class="field"><label>default reps</label>
+        <input type="number" inputmode="numeric" id="new-reps" class="in-reps" placeholder="—">
+      </div>
+    </div>
+    <div class="field" style="margin-bottom:10px">
+      <label>Muscle group</label>
+      <select id="new-mg" class="picker" style="margin:0;padding:9px 12px;font-size:13px">
+        <option value="">—</option>
+        ${addMgOptions}
+      </select>
+    </div>
+    <button class="btn" id="add-ex-btn" style="margin-top:0">Add exercise</button>`;
+
+  addCard.querySelector("#add-ex-btn").onclick=()=>{
+    const name=addCard.querySelector("#new-name").value.trim();
+    const sch=addCard.querySelector("#new-scheme").value.trim()||"2×8–12";
+    const kg=parseFloat(addCard.querySelector("#new-kg").value)||"";
+    const reps=parseInt(addCard.querySelector("#new-reps").value)||"";
+    const mg=addCard.querySelector("#new-mg").value;
+    if(!name){toast("Enter an exercise name");return;}
+    ROUTINE[day].push([name,sch,kg,reps,mg]);
+    saveRoutine();
+    renderTrain();
+    toast(`Added ${name}`);
+  };
+  list.appendChild(addCard);
+}
+
+$("#save-session").onclick=()=>{
+  const dt=$("#train-date").value;
+  const ts=dt?new Date(dt).getTime():Date.now();
+  let n=0;
+  document.querySelectorAll("#train-list .card").forEach(c=>{
+    c.querySelectorAll(".set-row").forEach(row=>{
+      const kg=parseFloat(row.querySelector(".in-kg").value);
+      const reps=parseInt(row.querySelector(".in-reps").value);
+      if(kg>0&&reps>0){
+        logs.push({id:ts+Math.random(),ts,workout:day,exId:c.dataset.ex,exName:c.dataset.name,kg,reps,set:+row.dataset.sn});
+        n++;
+      }
+    });
+  });
+  if(!n){toast("Fill in at least one set");return;}
+  save(K_LOGS,logs);renderTrain();toast(`Logged ${n} set${n>1?"s":""} · ${day}`);
+};
+
+/* ── PROGRESS ── */
+let mgFilter="All";
+
+function renderMgFilter(){
+  const div=$("#mg-filter");div.innerHTML="";
+  const present=new Set();
+  for(const w in ROUTINE)ROUTINE[w].forEach(ex=>{if(ex[4])present.add(ex[4]);});
+  const groups=["All",...MUSCLE_GROUPS.filter(g=>present.has(g))];
+  groups.forEach(g=>{
+    const btn=document.createElement("button");
+    btn.className="mg-chip"+(mgFilter===g?" active":"");
+    btn.textContent=g;
+    btn.onclick=()=>{mgFilter=g;renderMgFilter();renderProgress();};
+    div.appendChild(btn);
+  });
+}
+
+function renderExPicker(){
+  const sel=$("#ex-picker");const prev=sel.value;sel.innerHTML="";
+  for(const w in ROUTINE){
+    const exs=mgFilter==="All"?ROUTINE[w]:ROUTINE[w].filter(ex=>(ex[4]||"")===mgFilter);
+    if(!exs.length)continue;
+    const g=document.createElement("optgroup");g.label=w;
+    exs.forEach(([name])=>{
+      const o=document.createElement("option");o.value=exId(w,name);o.textContent=name;g.appendChild(o);
+    });
+    sel.appendChild(g);
+  }
+  if(prev&&[...sel.options].some(o=>o.value===prev))sel.value=prev;
+  else if(sel.options.length)sel.value=sel.options[0].value;
+  sel.onchange=renderProgress;
+}
+
+function sparkline(svg,vals){
+  svg.innerHTML="";if(vals.length<2)return;
+  const W=300,H=90,pad=8;
+  const min=Math.min(...vals),max=Math.max(...vals),rng=max-min||1;
+  const x=i=>pad+i*(W-2*pad)/(vals.length-1);
+  const y=v=>H-pad-(v-min)/rng*(H-2*pad);
+  let d=vals.map((v,i)=>(i?"L":"M")+x(i).toFixed(1)+" "+y(v).toFixed(1)).join(" ");
+  const area=d+` L ${x(vals.length-1).toFixed(1)} ${H-pad} L ${x(0).toFixed(1)} ${H-pad} Z`;
+  svg.insertAdjacentHTML("beforeend",
+    `<path d="${area}" fill="rgba(197,217,138,.12)"/>`+
+    `<path d="${d}" fill="none" stroke="#c5d98a" stroke-width="2" stroke-linejoin="round" stroke-linecap="round"/>`+
+    `<circle cx="${x(vals.length-1).toFixed(1)}" cy="${y(vals[vals.length-1]).toFixed(1)}" r="3" fill="#c5d98a"/>`);
+}
+
+function bwSparkline(svg,entries){
+  svg.innerHTML="";if(entries.length<2)return;
+  const W=300,H=90,pad=8;
+  const vals=entries.map(e=>e.kg);
+  const min=Math.min(...vals),max=Math.max(...vals),rng=max-min||1;
+  const x=i=>pad+i*(W-2*pad)/(entries.length-1);
+  const y=v=>H-pad-(v-min)/rng*(H-2*pad);
+  const d=vals.map((v,i)=>(i?"L":"M")+x(i).toFixed(1)+" "+y(v).toFixed(1)).join(" ");
+  svg.insertAdjacentHTML("beforeend",
+    `<path d="${d}" fill="none" stroke="rgba(100,106,114,.35)" stroke-width="1.5" stroke-linejoin="round" stroke-linecap="round"/>`);
+  entries.forEach((en,i)=>{
+    const col=phaseColor(en.phase);
+    svg.insertAdjacentHTML("beforeend",
+      `<circle cx="${x(i).toFixed(1)}" cy="${y(en.kg).toFixed(1)}" r="${i===entries.length-1?4:3}" fill="${col}" stroke="var(--panel)" stroke-width="1.5"/>`);
+  });
+}
+
+function renderProgress(){
+  renderExPicker();
+  const id=$("#ex-picker").value,body=$("#progress-body");
+  const sessions=sessionGroups(id);
+  if(!sessions.length){body.innerHTML=`<p class="empty">No entries yet.<br>Log this lift on the Train tab and it'll chart here.</p>`;return;}
+  const lastGroup=sessions[sessions.length-1],firstGroup=sessions[0];
+  const lastBest=bestSet(lastGroup),firstBest=bestSet(firstGroup);
+  const allBestE=Math.max(...sessions.map(g=>e1rm(bestSet(g).kg,bestSet(g).reps)));
+  const gain=e1rm(lastBest.kg,lastBest.reps)-e1rm(firstBest.kg,firstBest.reps);
+  body.innerHTML=`
+    <div class="stat-row">
+      <div class="stat"><div class="k">Last best</div><div class="v">${fmt(lastBest.kg)}<small>×${lastBest.reps}</small></div></div>
+      <div class="stat"><div class="k">Best e1RM</div><div class="v">${fmt(allBestE)}<small>kg</small></div></div>
+      <div class="stat"><div class="k">Since start</div><div class="v" style="color:${gain>0.05?'var(--up)':gain<-0.05?'var(--down)':'var(--ink)'}">${gain>0?"+":""}${fmt(gain)}</div></div>
+    </div>
+    <svg class="spark" id="ex-spark" viewBox="0 0 300 90" preserveAspectRatio="none"></svg>
+    <h2 class="sec">History — newest first</h2>
+    <ul class="hist" id="ex-hist"></ul>`;
+  sparkline($("#ex-spark"),sessions.map(g=>e1rm(bestSet(g).kg,bestSet(g).reps)));
+  const ul=$("#ex-hist");
+  [...sessions].reverse().forEach((group,i,arr)=>{
+    const prevGroup=arr[i+1];
+    const best=bestSet(group),prevBest=prevGroup?bestSet(prevGroup):null;
+    const de=prevBest?e1rm(best.kg,best.reps)-e1rm(prevBest.kg,prevBest.reps):null;
+    const cls=de==null?"flat":de>0.05?"up":de<-0.05?"down":"flat";
+    const dTxt=de==null?"—":(de>0?"+":"")+fmt(de);
+    const setsHtml=group.map(e=>`<span><b>${fmt(e.kg)}</b>×${e.reps}</span>`).join("");
+    const li=document.createElement("li");
+    li.innerHTML=`
+      <div class="hist-head">
+        <span class="when">${shortDate(group[0].ts)}</span>
+        <div style="display:flex;align-items:center;gap:6px">
+          <span class="d ${cls}">${dTxt}</span>
+          <button class="del" title="Delete session">✕</button>
+        </div>
+      </div>
+      <div class="sets-summary">${setsHtml}</div>`;
+    li.querySelector(".del").onclick=()=>{
+      const ts=group[0].ts;
+      logs=logs.filter(l=>!(l.exId===id&&l.ts===ts));
+      save(K_LOGS,logs);renderProgress();toast("Session deleted");
+    };
+    ul.appendChild(li);
+  });
+}
+
+/* ── BODY ── */
+$("#save-bw").onclick=()=>{
+  const kg=parseFloat($("#bw-kg").value);
+  if(!(kg>0)){toast("Enter a weight");return;}
+  const dt=$("#bw-date").value;
+  const ts=dt?new Date(dt).getTime():Date.now();
+  const sel=document.querySelector(".outfit-chip.selected");
+  const phase=sel?sel.dataset.phase:"";
+  bw.push({id:ts+Math.random(),ts,kg,tod:$("#bw-tod").value,phase});
+  save(K_BW,bw);$("#bw-kg").value="";
+  document.querySelectorAll(".outfit-chip").forEach(c=>{
+    c.classList.remove("selected");c.style.background="";c.style.borderColor="";c.style.color="";
+  });
+  renderBody();toast("Weight logged");
+};
+
+function renderBody(){
+  const stats=$("#bw-stats"),ul=$("#bw-hist");
+  const s=[...bw].sort((a,b)=>a.ts-b.ts);
+  if(s.length===0){
+    stats.innerHTML="";$("#bw-spark").innerHTML="";
+    ul.innerHTML=`<p class="empty">No weigh-ins yet.<br>Log one above — same time of day each time keeps it honest.</p>`;return;
+  }
+  const last=s[s.length-1];
+  const last7=s.filter(x=>x.ts>=Date.now()-7*864e5);
+  const avg7=last7.length?last7.reduce((a,x)=>a+x.kg,0)/last7.length:last.kg;
+  const trend=s.length>1?last.kg-s[0].kg:0;
+  stats.innerHTML=`
+    <div class="stat"><div class="k">Latest</div><div class="v">${fmt(last.kg)}<small>kg</small></div></div>
+    <div class="stat"><div class="k">7-day avg</div><div class="v">${fmt(avg7)}<small>kg</small></div></div>
+    <div class="stat"><div class="k">Net</div><div class="v" style="color:${trend>0.05?'var(--up)':trend<-0.05?'var(--down)':'var(--ink)'}">${trend>0?"+":""}${fmt(trend)}</div></div>`;
+  bwSparkline($("#bw-spark"),s);
+  ul.innerHTML="";
+  [...s].reverse().forEach((en,i,arr)=>{
+    const prev=arr[i+1];const dk=prev?en.kg-prev.kg:null;
+    const cls=dk==null?"flat":dk>0.05?"up":dk<-0.05?"down":"flat";
+    const dTxt=dk==null?"—":(dk>0?"+":"")+fmt(dk);
+    const pip=en.phase?`<span class="outfit-pip" style="background:${phaseColor(en.phase)}"></span>${en.phase}`:"";
+    const li=document.createElement("li");
+    li.innerHTML=`
+      <div class="hist-head">
+        <div>
+          <div class="load"><b>${fmt(en.kg)}</b> kg</div>
+          <div class="when">${shortDate(en.ts)} · <span class="tod">${en.tod}</span>${pip?` · <span style="color:var(--ink-dim);display:inline-flex;align-items:center">${pip}</span>`:""}</div>
+        </div>
+        <div style="display:flex;align-items:center;gap:6px"><span class="d ${cls}">${dTxt}</span><button class="del">✕</button></div>
+      </div>`;
+    li.querySelector(".del").onclick=()=>{bw=bw.filter(b=>b.id!==en.id);save(K_BW,bw);renderBody();toast("Entry deleted");};
+    ul.appendChild(li);
+  });
+}
+
+/* ── backup ── */
+$("#export-btn").onclick=()=>{
+  const blob=new Blob([JSON.stringify({logs,bw,routine:ROUTINE,exported:new Date().toISOString()},null,2)],{type:"application/json"});
+  const a=document.createElement("a");a.href=URL.createObjectURL(blob);
+  a.download="sashimilog-"+new Date().toISOString().slice(0,10)+".json";
+  a.click();toast("Backup saved");
+};
+$("#import-btn").onclick=()=>$("#import-file").click();
+$("#import-file").onchange=ev=>{
+  const f=ev.target.files[0];if(!f)return;
+  const r=new FileReader();
+  r.onload=()=>{
+    try{
+      const d=JSON.parse(r.result);
+      if(Array.isArray(d.logs))logs=d.logs;
+      if(Array.isArray(d.bw))bw=d.bw;
+      if(d.routine&&typeof d.routine==="object"){ROUTINE=d.routine;saveRoutine();}
+      save(K_LOGS,logs);save(K_BW,bw);
+      day=Object.keys(ROUTINE)[0];
+      renderDaySeg();renderTrain();renderMgFilter();renderExPicker();
+      toast("Backup restored");
+    }catch{toast("Couldn't read that file");}
+  };
+  r.readAsText(f);ev.target.value="";
+};
+
+/* ── apple-touch-icon via canvas ── */
+(function(){
+  const c=document.createElement("canvas");c.width=c.height=192;
+  const ctx=c.getContext("2d"),r=38;
+  ctx.beginPath();
+  ctx.moveTo(r,0);ctx.lineTo(192-r,0);ctx.quadraticCurveTo(192,0,192,r);
+  ctx.lineTo(192,192-r);ctx.quadraticCurveTo(192,192,192-r,192);
+  ctx.lineTo(r,192);ctx.quadraticCurveTo(0,192,0,192-r);
+  ctx.lineTo(0,r);ctx.quadraticCurveTo(0,0,r,0);ctx.closePath();
+  ctx.fillStyle="#131d15";ctx.fill();
+  ctx.beginPath();ctx.roundRect(52,112,88,28,8);ctx.fillStyle="#ccc8bc";ctx.fill();
+  ctx.beginPath();ctx.roundRect(44,74,104,48,13);ctx.fillStyle="#d97b6a";ctx.fill();
+  ctx.globalAlpha=0.55;
+  ctx.beginPath();ctx.roundRect(44,74,104,22,13);ctx.fillStyle="#e89988";ctx.fill();
+  ctx.globalAlpha=1;
+  document.getElementById("ati").href=c.toDataURL("image/png");
+})();
+
+/* ── service worker ── */
+if("serviceWorker" in navigator)navigator.serviceWorker.register("./sw.js").catch(()=>{});
+
+/* ── init ── */
+function tickClock(){$("#clock").textContent=new Date().toLocaleTimeString(undefined,{hour:"2-digit",minute:"2-digit"});}
+tickClock();setInterval(tickClock,30000);
+const now=new Date();
+$("#train-date").value=nowLocalISO(now);
+$("#bw-date").value=nowLocalISO(now);
+$("#bw-tod").value=todFromDate(now);
+document.querySelectorAll(".outfit-chip").forEach(chip=>{
+  chip.onclick=()=>{
+    const already=chip.classList.contains("selected");
+    document.querySelectorAll(".outfit-chip").forEach(c=>{
+      c.classList.remove("selected");c.style.background="";c.style.borderColor="";c.style.color="";
+    });
+    if(!already){
+      const col=phaseColor(chip.dataset.phase);
+      chip.classList.add("selected");
+      chip.style.background=col;chip.style.borderColor=col;chip.style.color="#131d15";
+    }
+  };
+});
+renderDaySeg();renderTrain();renderMgFilter();renderExPicker();
+</script>
+</body>
+</html>
