@@ -286,7 +286,7 @@
 <div id="login-overlay" class="hidden">
   <div class="login-card">
     <h2>Sashimi</h2>
-    <p>Hey Sash — enter your name and password to get started.</p>
+    <p>Hey baby — enter your name and password to login to your secure database.</p>
     <div class="login-field"><label>Name</label><input type="text" id="login-name" autocomplete="username" placeholder="Sash"></div>
     <div class="login-field"><label>Password</label><input type="password" id="login-pw" autocomplete="current-password"></div>
     <div class="login-err" id="login-err"></div>
@@ -1098,7 +1098,7 @@ async function pullCloud(){
     if(d.lastSaved&&d.lastSaved<=localTs){setSyncStatus('ok');return;} // local is newer, keep it
     if(d.logs)logs=d.logs;
     if(d.bw)bw=d.bw;
-    if(d.routine&&typeof d.routine==='object'){ROUTINE=d.routine;save(K_ROUTINE,ROUTINE);}
+    if(d.routine&&typeof d.routine==='object'&&!localStorage.getItem(K_ROUTINE)){ROUTINE=d.routine;save(K_ROUTINE,ROUTINE);}
     if(d.feel)feel=d.feel;
     save(K_LOGS,logs);save(K_BW,bw);save(K_FEEL,feel);
     setSyncStatus('ok');
