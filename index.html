@@ -1100,7 +1100,7 @@ async function pullCloud(){
     if(d.logs)logs=d.logs;
     if(d.bw)bw=d.bw;
     if(d.feel)feel=d.feel;
-    // routine is never restored from cloud — DEFAULT_ROUTINE is always the baseline
+    if(d.routine&&typeof d.routine==='object'){ROUTINE=d.routine;save(K_ROUTINE,ROUTINE);}
     save(K_LOGS,logs);save(K_BW,bw);save(K_FEEL,feel);
     setSyncStatus('ok');
   }catch{setSyncStatus('err');}
