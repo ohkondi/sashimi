@@ -1,4 +1,4 @@
-const CACHE = 'sashimi-v4';
+const CACHE = 'sashimi-v5';
 const SHELL = ['./index.html', './manifest.json', './icon.svg'];
 
 self.addEventListener('install', e => {
