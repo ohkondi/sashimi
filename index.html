@@ -184,6 +184,9 @@
 
   .feel-chips{display:grid;grid-template-columns:repeat(5,1fr);gap:5px;margin-bottom:10px}
   .feel-chip{background:none;border:1px solid;font-family:var(--sans);font-size:10px;font-weight:600;letter-spacing:.01em;padding:9px 2px;border-radius:20px;cursor:pointer;transition:.12s;text-align:center;white-space:nowrap}
+  @keyframes fadeUp{from{opacity:0;transform:translateY(14px)}to{opacity:1;transform:translateY(0)}}
+  @keyframes chipBoom{0%{opacity:0;transform:scale(.65)}70%{transform:scale(1.07)}100%{opacity:1;transform:scale(1)}}
+  @keyframes feelPop{0%{opacity:0;transform:scale(.55)}65%{transform:scale(1.12)}100%{opacity:1;transform:scale(1)}}
 </style>
 </head>
 <body>
@@ -375,13 +378,15 @@ if(!localStorage.getItem(K_SEED)){
 
 /* ── nav ── */
 let day=Object.keys(ROUTINE)[0];
+let progressChipsAnimated=false;
 document.querySelectorAll("nav button").forEach(b=>b.onclick=()=>{
   document.querySelectorAll("nav button").forEach(x=>x.classList.remove("active"));
   b.classList.add("active");
   document.querySelectorAll(".view").forEach(v=>v.classList.remove("active"));
   $("#view-"+b.dataset.view).classList.add("active");
-  if(b.dataset.view==="progress")renderProgress();
+  if(b.dataset.view==="progress"){progressChipsAnimated=false;renderProgress();}
   if(b.dataset.view==="body")renderBody();
+  if(b.dataset.view==="train")popFeelChips();
 });
 
 /* ── TRAIN ── */
@@ -686,6 +691,7 @@ function groupSparkline(svg,data,col){
     `<path d="${area}" fill="${hexToRgba(col,.1)}"/>`+
     `<path d="${d}" fill="none" stroke="${col}" stroke-width="2" stroke-linejoin="round" stroke-linecap="round"/>`+
     `<circle cx="${x(vals.length-1).toFixed(1)}" cy="${y(vals[vals.length-1]).toFixed(1)}" r="3" fill="${col}"/>`);
+  animateSparkline(svg);
 }
 function miniSparkline(svg,vals,col){
   if(vals.length<2)return;
@@ -699,6 +705,16 @@ function miniSparkline(svg,vals,col){
     `<circle cx="${x(vals.length-1).toFixed(1)}" cy="${y(vals[vals.length-1]).toFixed(1)}" r="2.5" fill="${col}"/>`);
 }
 
+function animateSparkline(svg){
+  const path=svg.querySelectorAll('path')[1];if(!path)return;
+  const len=path.getTotalLength();
+  path.style.strokeDasharray=len;path.style.strokeDashoffset=len;
+  path.style.transition='none';
+  requestAnimationFrame(()=>requestAnimationFrame(()=>{
+    path.style.transition='stroke-dashoffset .9s cubic-bezier(.4,0,.2,1)';
+    path.style.strokeDashoffset='0';
+  }));
+}
 function bwSparkline(svg,entries){
   svg.innerHTML="";if(entries.length<2)return;
   const W=300,H=90,pad=8;
@@ -740,6 +756,12 @@ function renderProgress(){
       activeGroup=chip.dataset.group;activeLift=null;renderProgress();
     };
   });
+  if(!progressChipsAnimated){
+    body.querySelectorAll('.mg-chip').forEach((chip,i)=>{
+      chip.style.animation=`chipBoom .38s cubic-bezier(.34,1.56,.64,1) ${i*55}ms both`;
+    });
+    progressChipsAnimated=true;
+  }
   if(!activeGroup){
     $("#group-body").innerHTML=`<p class="empty" style="margin-top:4px">Select a muscle group above.</p>`;return;
   }
@@ -763,6 +785,7 @@ function renderGroupView(groupName){
   const liftList=$("#lift-list");
   const exercises=[];
   for(const w in ROUTINE)ROUTINE[w].forEach(ex=>{if((ex[4]||"")===groupName)exercises.push({id:exId(w,ex[0]),name:ex[0]});});
+  let _ci=0;
   exercises.forEach(({id,name})=>{
     const sessions=sessionGroups(id);if(!sessions.length)return;
     const lb=bestSet(sessions[sessions.length-1]);
@@ -777,8 +800,10 @@ function renderGroupView(groupName){
         <svg viewBox="0 0 120 40" preserveAspectRatio="none" style="width:80px;height:34px;flex-shrink:0;background:var(--panel-2);border:1px solid var(--line);border-radius:6px"></svg>
       </div>`;
     miniSparkline(card.querySelector("svg"),vals,col);
+    card.style.animation=`fadeUp .32s ease ${_ci*60}ms both`;
     card.onclick=()=>{activeLift=id;renderProgress();};
     liftList.appendChild(card);
+    _ci++;
   });
   if(!liftList.children.length)liftList.innerHTML=`<p class="empty">Log some ${groupName} sessions to see individual lift data.</p>`;
 }
@@ -984,6 +1009,14 @@ function initFeelChips(){
   });
 }
 
+function popFeelChips(){
+  document.querySelectorAll('#feel-chips .feel-chip').forEach((chip,i)=>{
+    chip.style.animation='none';
+    chip.offsetHeight;
+    chip.style.animation=`feelPop .4s cubic-bezier(.34,1.56,.64,1) ${i*45}ms both`;
+  });
+}
+
 /* ── train tab quote (shuffled per session) ── */
 (function(){
   const quotes=["Shakshukaaa...","For support you can reach us at 1800-B-I-A-T-C-H","Cutie.","Enjoy your day Smiley Eyes.",""];
@@ -992,6 +1025,12 @@ function initFeelChips(){
   const pick=[...quotes].sort(()=>Math.random()-.5)[0];
   if(pick)el.textContent=pick;else el.style.display='none';
 })();
+
+/* ── gill parallax ── */
+window.addEventListener('scroll',()=>{
+  const el=document.getElementById('gill-bg');
+  if(el)el.style.transform=`translateY(${window.scrollY*.18}px)`;
+},{passive:true});
 
 /* ── service worker ── */
 if("serviceWorker" in navigator)navigator.serviceWorker.register("./sw.js").catch(()=>{});
@@ -1016,7 +1055,7 @@ document.querySelectorAll(".outfit-chip").forEach(chip=>{
     }
   };
 });
-renderDaySeg();renderTrain();initFeelChips();
+renderDaySeg();renderTrain();initFeelChips();popFeelChips();
 $("#train-date").addEventListener("change",initFeelChips);
 </script>
 </body>
