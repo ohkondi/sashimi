@@ -1,10 +1,12 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 192 192">
-  <rect width="192" height="192" rx="38" fill="#15171a"/>
-  <rect x="8" y="8" width="176" height="176" rx="32" fill="#1d2025"/>
-  <!-- rice base -->
-  <rect x="52" y="112" width="88" height="28" rx="8" fill="#ccc8bc"/>
-  <!-- fish -->
-  <rect x="44" y="74" width="104" height="48" rx="13" fill="#d97b6a"/>
-  <!-- fish highlight -->
-  <rect x="44" y="74" width="104" height="22" rx="13" fill="#e89988" opacity="0.55"/>
+  <rect width="192" height="192" rx="38" fill="#131d15"/>
+  <rect x="8" y="8" width="176" height="176" rx="30" fill="#1b2b1d"/>
+  <ellipse cx="96" cy="104" rx="58" ry="25" fill="#d6d1c2"/>
+  <ellipse cx="96" cy="99" rx="54" ry="21" fill="#e2dece" opacity="0.5"/>
+  <rect x="38" y="94" width="108" height="9" rx="3" fill="#131d15" opacity="0.75"/>
+  <ellipse cx="96" cy="84" rx="54" ry="22" fill="#d97b6a"/>
+  <ellipse cx="82" cy="77" rx="28" ry="11" fill="#e89988" opacity="0.52"/>
+  <path d="M 50 86 Q 96 75 142 87" fill="none" stroke="#e8b09a" stroke-width="1.5" opacity="0.4"/>
+  <path d="M 54 92 Q 96 82 138 94" fill="none" stroke="#e8b09a" stroke-width="1" opacity="0.3"/>
+  <ellipse cx="148" cy="112" rx="6" ry="4" fill="#7ab87a"/>
 </svg>
