@@ -181,6 +181,9 @@
   #gill-bg{position:fixed;top:0;left:0;width:100%;height:100%;pointer-events:none;z-index:0}
   header,main{position:relative;z-index:1}
   .train-quote{font-family:var(--mono);font-size:11px;color:var(--ink-faint);text-align:center;letter-spacing:.05em;opacity:.5;padding:28px 20px 4px;line-height:1.7}
+
+  .feel-chips{display:grid;grid-template-columns:repeat(5,1fr);gap:5px;margin-bottom:10px}
+  .feel-chip{background:none;border:1px solid;font-family:var(--sans);font-size:10px;font-weight:600;letter-spacing:.01em;padding:9px 2px;border-radius:20px;cursor:pointer;transition:.12s;text-align:center;white-space:nowrap}
 </style>
 </head>
 <body>
@@ -205,6 +208,13 @@
       </button>
     </div>
     <div id="train-list"></div>
+    <div class="feel-chips" id="feel-chips">
+      <button class="feel-chip" data-feel="1">Midget Dawg</button>
+      <button class="feel-chip" data-feel="2">Mid Dawg</button>
+      <button class="feel-chip" data-feel="3">Good Dawg</button>
+      <button class="feel-chip" data-feel="4">Large Dawg</button>
+      <button class="feel-chip" data-feel="5">Big Dawg</button>
+    </div>
     <button class="btn" id="save-session">Log session</button>
     <p class="train-quote" id="train-quote"></p>
   </section>
@@ -255,22 +265,24 @@
 
 <nav>
   <button class="active" data-view="train"><span class="ico">▦</span>Train</button>
-  <button data-view="progress"><span class="ico">↗</span>Progress</button>
-  <button data-view="body"><span class="ico">◷</span>Body</button>
+  <button data-view="progress"><span class="ico">↗</span>Strength</button>
+  <button data-view="body"><span class="ico">◷</span>Progress</button>
 </nav>
 
 <div class="toast" id="toast"></div>
 
 <script>
 /* ── storage ── */
-const K_LOGS="sash_logs_v1", K_BW="sash_bw_v1", K_SEED="sash_seeded_v1", K_ROUTINE="sash_routine_v1";
+const K_LOGS="sash_logs_v1", K_BW="sash_bw_v1", K_SEED="sash_seeded_v1", K_ROUTINE="sash_routine_v1", K_FEEL="sash_feel_v1";
 const load=(k,f)=>{try{return JSON.parse(localStorage.getItem(k))??f}catch{return f}};
 const save=(k,v)=>localStorage.setItem(k,JSON.stringify(v));
 let logs=load(K_LOGS,[]);
 let bw=load(K_BW,[]);
+let feel=load(K_FEEL,{});
 
 const PHASES={Period:"#c94b4b",Follicular:"#e07fa0",Ovulation:"#e3b13c",Luteal:"#9b7fd4"};
 const phaseColor=p=>PHASES[p]||"#646a72";
+const FEEL_COLORS=["#c94b4b","#d07060","#d4a843","#7dbe65","#c5d98a"];
 
 /* ── muscle groups ── */
 const MUSCLE_GROUPS={Quads:"#5b9fd6",Hamstrings:"#9b7fd4",Glutes:"#e07fa0",Calves:"#e8956d",Core:"#c47fb5",Chest:"#e07060",Back:"#4db8a4",Shoulders:"#d4a843"};
@@ -956,6 +968,22 @@ $("#import-file").onchange=ev=>{
   document.body.insertBefore(svg,document.body.firstChild);
 })();
 
+/* ── feel chips ── */
+function initFeelChips(){
+  const dateKey=($("#train-date").value||new Date().toISOString()).slice(0,10);
+  const cur=feel[dateKey]||0;
+  document.querySelectorAll("#feel-chips .feel-chip").forEach(chip=>{
+    const v=+chip.dataset.feel,col=FEEL_COLORS[v-1],on=cur===v;
+    chip.style.borderColor=on?col:col+"44";
+    chip.style.background=on?col:"";
+    chip.style.color=on?"#131d15":"var(--ink-faint)";
+    chip.onclick=()=>{
+      if(feel[dateKey]===v)delete feel[dateKey];else feel[dateKey]=v;
+      save(K_FEEL,feel);initFeelChips();
+    };
+  });
+}
+
 /* ── train tab quote (shuffled per session) ── */
 (function(){
   const quotes=["Shakshukaaa...","For support you can reach us at 1800-B-I-A-T-C-H","Cutie.","Enjoy your day Smiley Eyes.",""];
@@ -988,7 +1016,8 @@ document.querySelectorAll(".outfit-chip").forEach(chip=>{
     }
   };
 });
-renderDaySeg();renderTrain();
+renderDaySeg();renderTrain();initFeelChips();
+$("#train-date").addEventListener("change",initFeelChips);
 </script>
 </body>
 </html>
