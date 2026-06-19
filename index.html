@@ -1139,7 +1139,7 @@ async function signIn(name,pw){
     headers:{'apikey':SB_ANON,'Content-Type':'application/json'},
     body:JSON.stringify({email:SB_ACCOUNT,password:pw})
   });
-  if(!r.ok){const e=await r.json();throw new Error(e.error_description||'Sync error — check config');}
+  if(!r.ok){const e=await r.json();throw new Error(e.error_description||e.message||e.msg||JSON.stringify(e));}
   const d=await r.json();
   saveSession({access_token:d.access_token,refresh_token:d.refresh_token,expires_at:Date.now()+d.expires_in*1000,user_id:d.user.id});
 }
