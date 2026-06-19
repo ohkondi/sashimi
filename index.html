@@ -324,6 +324,7 @@ let logs=load(K_LOGS,[]);
 let bw=load(K_BW,[]);
 let feel=load(K_FEEL,{});
 const K_SESSION='sash_session_v1';
+const K_LAST_SAVED='sash_lastSaved_v1';
 let session=load(K_SESSION,null);
 
 const PHASES={Period:"#c94b4b",Follicular:"#e07fa0",Ovulation:"#e3b13c",Luteal:"#9b7fd4"};
@@ -1106,10 +1107,12 @@ async function pushCloud(){
   if(!session)return;
   setSyncStatus('busy');
   try{
+    const lastSaved=Date.now();
+    save(K_LAST_SAVED,lastSaved);
     const r=await sbFetch(`/storage/v1/object/${SB_BUCKET}/${session.user_id}/data.json`,{
       method:'POST',
       headers:{'Content-Type':'application/json','x-upsert':'true'},
-      body:JSON.stringify({logs,bw,routine:ROUTINE,feel,lastSaved:Date.now()})
+      body:JSON.stringify({logs,bw,routine:ROUTINE,feel,lastSaved})
     });
     setSyncStatus(r&&r.ok?'ok':'err');
   }catch{setSyncStatus('err');}
@@ -1120,9 +1123,11 @@ async function pullCloud(){
   setSyncStatus('busy');
   try{
     const r=await sbFetch(`/storage/v1/object/authenticated/${SB_BUCKET}/${session.user_id}/data.json`);
-    if(!r||r.status===404){setSyncStatus('ok');return;}
+    if(!r||r.status===404){setSyncStatus('ok');pushCloud();return;} // no cloud data yet — push local as baseline
     if(!r.ok){setSyncStatus('err');return;}
     const d=await r.json();
+    const localTs=load(K_LAST_SAVED,0);
+    if(d.lastSaved&&d.lastSaved<=localTs){setSyncStatus('ok');return;} // local is newer, keep it
     if(d.logs)logs=d.logs;
     if(d.bw)bw=d.bw;
     if(d.routine&&typeof d.routine==='object'){ROUTINE=d.routine;save(K_ROUTINE,ROUTINE);}
