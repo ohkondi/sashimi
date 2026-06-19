@@ -278,14 +278,9 @@
     <ul class="hist" id="bw-hist"></ul>
   </section>
 
-  <div class="tools">
-    <button class="btn ghost" id="export-btn">Download backup</button>
-    <button class="btn ghost" id="import-btn">Restore backup</button>
-  </div>
   <div class="tools" style="margin-top:0">
     <button class="btn ghost" id="logout-btn" style="color:var(--ink-faint);font-size:13px">Sign out</button>
   </div>
-  <input type="file" id="import-file" accept="application/json" hidden>
 </main>
 
 <div id="login-overlay" class="hidden">
@@ -948,33 +943,6 @@ function renderBody(){
     ul.appendChild(li);
   });
 }
-
-/* ── backup ── */
-$("#export-btn").onclick=()=>{
-  const blob=new Blob([JSON.stringify({logs,bw,routine:ROUTINE,exported:new Date().toISOString()},null,2)],{type:"application/json"});
-  const a=document.createElement("a");a.href=URL.createObjectURL(blob);
-  a.download="sashimilog-"+new Date().toISOString().slice(0,10)+".json";
-  a.click();toast("Backup saved");
-};
-$("#import-btn").onclick=()=>$("#import-file").click();
-$("#import-file").onchange=ev=>{
-  const f=ev.target.files[0];if(!f)return;
-  const r=new FileReader();
-  r.onload=()=>{
-    try{
-      const d=JSON.parse(r.result);
-      if(Array.isArray(d.logs))logs=d.logs;
-      if(Array.isArray(d.bw))bw=d.bw;
-      if(d.routine&&typeof d.routine==="object"){ROUTINE=d.routine;saveRoutine();}
-      save(K_LOGS,logs);save(K_BW,bw);
-      day=Object.keys(ROUTINE)[0];
-      activeGroup=null;activeLift=null;
-      renderDaySeg();renderTrain();
-      toast("Backup restored");pushCloud();
-    }catch{toast("Couldn't read that file");}
-  };
-  r.readAsText(f);ev.target.value="";
-};
 
 /* ── apple-touch-icon via canvas ── */
 (function(){
