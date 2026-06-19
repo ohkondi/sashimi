@@ -477,7 +477,7 @@ function renderTrain(){
     const id=exId(day,name);
     const ns=parseSets(sch);
     const prev=lastSessionSets(id);
-    let lastLine="Good luck baby! X";
+    let lastLine="";
     if(prev){
       const setStr=prev.map(e=>`<b>${fmt(e.kg)}</b>×${e.reps}`).join(" · ");
       lastLine=`last  ${setStr}  <span style="color:var(--ink-faint)">${shortDate(prev[0].ts)}</span>`;
@@ -502,7 +502,7 @@ function renderTrain(){
     }
     card.innerHTML=`
       <div class="ex-head"><span class="ex-name">${name}</span><span class="ex-scheme">${sch}</span></div>
-      <div class="ex-last">${lastLine}</div>
+      ${lastLine?`<div class="ex-last">${lastLine}</div>`:''}
       ${rowsHtml}
       <div class="set-deltas"></div>`;
     const deltaDiv=card.querySelector(".set-deltas");
