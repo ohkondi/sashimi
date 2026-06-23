@@ -312,7 +312,7 @@ const SASH_NAME='Sash';
 const SASH_PASS='Sashimi';
 
 /* ── storage ── */
-const K_LOGS="sash_logs_v1", K_BW="sash_bw_v1", K_SEED="sash_seeded_v1", K_ROUTINE="sash_routine_v1", K_FEEL="sash_feel_v1";
+const K_LOGS="sash_logs_v1", K_BW="sash_bw_v1", K_SEED="sash_seeded_v1", K_ROUTINE="sash_routine_v1", K_FEEL="sash_feel_v1", K_DRAFT="sash_draft_v1";
 const load=(k,f)=>{try{return JSON.parse(localStorage.getItem(k))??f}catch{return f}};
 const save=(k,v)=>localStorage.setItem(k,JSON.stringify(v));
 let logs=load(K_LOGS,[]);
@@ -536,6 +536,17 @@ function renderDaySeg(){
   });
 }
 
+function saveDraft(){
+  const sets=[];
+  document.querySelectorAll("#train-list .card").forEach(c=>{
+    c.querySelectorAll(".set-row").forEach(row=>{
+      sets.push({exId:c.dataset.ex,sn:+row.dataset.sn,kg:row.querySelector(".in-kg").value,reps:row.querySelector(".in-reps").value});
+    });
+  });
+  if(sets.some(s=>s.kg||s.reps)) save(K_DRAFT,{day,ts:$("#train-date").value,sets});
+  else localStorage.removeItem(K_DRAFT);
+}
+
 function renderTrain(){
   const list=$("#train-list");list.innerHTML="";
   if(editMode){renderEditList(list);return;}
@@ -588,10 +599,26 @@ function renderTrain(){
         sp.className=cls;sp.dataset.dsn=sn;sp.textContent=`S${sn} ${sign(de)}`;
         deltaDiv.appendChild(sp);
       };
-      kgI.oninput=upd;repI.oninput=upd;
+      kgI.oninput=()=>{upd();saveDraft();};
+      repI.oninput=()=>{upd();saveDraft();};
     });
     list.appendChild(card);
   });
+  // restore draft
+  const draft=load(K_DRAFT,null);
+  if(draft&&draft.day===day){
+    if(draft.ts)$("#train-date").value=draft.ts;
+    list.querySelectorAll(".card").forEach(c=>{
+      c.querySelectorAll(".set-row").forEach(row=>{
+        const m=draft.sets&&draft.sets.find(s=>s.exId===c.dataset.ex&&s.sn===+row.dataset.sn);
+        if(m){
+          if(m.kg)row.querySelector(".in-kg").value=m.kg;
+          if(m.reps)row.querySelector(".in-reps").value=m.reps;
+          row.querySelector(".in-kg").dispatchEvent(new Event("input"));
+        }
+      });
+    });
+  }
 }
 
 function mgEditChipsHtml(current){
@@ -711,7 +738,7 @@ $("#save-session").onclick=()=>{
     });
   });
   if(!n){toast("Fill in at least one set");return;}
-  save(K_LOGS,logs);renderTrain();toast(`Logged ${n} set${n>1?"s":""} · ${day}`);pushCloud();logsChangedAt=Date.now();
+  localStorage.removeItem(K_DRAFT);save(K_LOGS,logs);renderTrain();toast(`Logged ${n} set${n>1?"s":""} · ${day}`);pushCloud();logsChangedAt=Date.now();
 };
 
 /* ── PROGRESS ── */
@@ -1167,7 +1194,7 @@ document.querySelectorAll(".outfit-chip").forEach(chip=>{
   };
 });
 renderDaySeg();renderTrain();initFeelChips();popFeelChips();
-$("#train-date").addEventListener("change",initFeelChips);
+$("#train-date").addEventListener("change",()=>{initFeelChips();saveDraft();});
 if(!session){showLogin();}
 else{setSyncStatus('ok');pushCloud();}
 
