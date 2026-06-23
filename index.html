@@ -564,7 +564,7 @@ function renderTrain(){
     card.className="card";card.dataset.ex=id;card.dataset.name=name;card.dataset.sets=ns;
     let rowsHtml="";
     for(let s=1;s<=ns;s++){
-      const p=prev?(prev.find(e=>(e.set||1)===s)||prev[prev.length-1]):null;
+      const p=prev?prev.find(e=>(e.set||1)===s):null;
       rowsHtml+=`
         <div class="set-row" data-sn="${s}">
           <div class="set-lbl">S${s}</div>
