@@ -738,7 +738,7 @@ $("#save-session").onclick=()=>{
     });
   });
   if(!n){toast("Fill in at least one set");return;}
-  localStorage.removeItem(K_DRAFT);save(K_LOGS,logs);renderTrain();toast(`Logged ${n} set${n>1?"s":""} · ${day}`);pushCloud();logsChangedAt=Date.now();
+  localStorage.removeItem(K_DRAFT);save(K_LOGS,logs);renderTrain();document.querySelectorAll("#train-list .in-kg,#train-list .in-reps").forEach(i=>i.value="");toast(`Logged ${n} set${n>1?"s":""} · ${day}`);pushCloud();logsChangedAt=Date.now();
 };
 
 /* ── PROGRESS ── */
