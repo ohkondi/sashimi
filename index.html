@@ -612,9 +612,9 @@ function renderTrain(){
       c.querySelectorAll(".set-row").forEach(row=>{
         const m=draft.sets&&draft.sets.find(s=>s.exId===c.dataset.ex&&s.sn===+row.dataset.sn);
         if(m){
-          if(m.kg)row.querySelector(".in-kg").value=m.kg;
-          if(m.reps)row.querySelector(".in-reps").value=m.reps;
-          row.querySelector(".in-kg").dispatchEvent(new Event("input"));
+          row.querySelector(".in-kg").value=m.kg||"";
+          row.querySelector(".in-reps").value=m.reps||"";
+          if(m.kg||m.reps)row.querySelector(".in-kg").dispatchEvent(new Event("input"));
         }
       });
     });
