@@ -419,14 +419,24 @@ if(!localStorage.getItem(K_SEED)){
 /* ── nav ── */
 let day=Object.keys(ROUTINE)[0];
 let progressChipsAnimated=false;
+let logsChangedAt=Date.now(),progressRenderedAt=0;
+let bwChangedAt=Date.now(),bodyRenderedAt=0;
+let _scrollPos={},_currentView='train';
 document.querySelectorAll("nav button").forEach(b=>b.onclick=()=>{
   document.querySelectorAll("nav button").forEach(x=>x.classList.remove("active"));
   b.classList.add("active");
+  _scrollPos[_currentView]=window.scrollY;
   document.querySelectorAll(".view").forEach(v=>v.classList.remove("active"));
-  $("#view-"+b.dataset.view).classList.add("active");
-  if(b.dataset.view==="progress"){progressChipsAnimated=false;renderProgress();}
-  if(b.dataset.view==="body")renderBody();
-  if(b.dataset.view==="train")popFeelChips();
+  _currentView=b.dataset.view;
+  $("#view-"+_currentView).classList.add("active");
+  if(_currentView==="progress"&&logsChangedAt>progressRenderedAt){
+    progressChipsAnimated=false;renderProgress();progressRenderedAt=Date.now();_scrollPos['progress']=0;
+  }
+  if(_currentView==="body"&&bwChangedAt>bodyRenderedAt){
+    renderBody();bodyRenderedAt=Date.now();_scrollPos['body']=0;
+  }
+  if(_currentView==="train")popFeelChips();
+  requestAnimationFrame(()=>window.scrollTo(0,_scrollPos[_currentView]||0));
 });
 
 /* ── TRAIN ── */
@@ -701,7 +711,7 @@ $("#save-session").onclick=()=>{
     });
   });
   if(!n){toast("Fill in at least one set");return;}
-  save(K_LOGS,logs);renderTrain();toast(`Logged ${n} set${n>1?"s":""} · ${day}`);pushCloud();
+  save(K_LOGS,logs);renderTrain();toast(`Logged ${n} set${n>1?"s":""} · ${day}`);pushCloud();logsChangedAt=Date.now();
 };
 
 /* ── PROGRESS ── */
@@ -886,7 +896,7 @@ function renderLiftView(id){
       <div class="sets-summary">${setsHtml}</div>`;
     li.querySelector(".del").onclick=()=>{
       const ts=group[0].ts;logs=logs.filter(l=>!(l.exId===id&&l.ts===ts));
-      save(K_LOGS,logs);renderProgress();toast("Session deleted");pushCloud();
+      save(K_LOGS,logs);renderProgress();toast("Session deleted");pushCloud();logsChangedAt=Date.now();
     };
     ul.appendChild(li);
   });
@@ -901,7 +911,7 @@ $("#save-bw").onclick=()=>{
   const sel=document.querySelector(".outfit-chip.selected");
   const phase=sel?sel.dataset.phase:"";
   bw.push({id:ts+Math.random(),ts,kg,tod:$("#bw-tod").value,phase});
-  save(K_BW,bw);pushCloud();$("#bw-kg").value="";
+  save(K_BW,bw);pushCloud();bwChangedAt=Date.now();$("#bw-kg").value="";
   document.querySelectorAll(".outfit-chip").forEach(c=>{
     c.classList.remove("selected");c.style.background="";c.style.borderColor="";c.style.color="";
   });
@@ -939,7 +949,7 @@ function renderBody(){
         </div>
         <div style="display:flex;align-items:center;gap:6px"><span class="d ${cls}">${dTxt}</span><button class="del">✕</button></div>
       </div>`;
-    li.querySelector(".del").onclick=()=>{bw=bw.filter(b=>b.id!==en.id);save(K_BW,bw);renderBody();toast("Entry deleted");pushCloud();};
+    li.querySelector(".del").onclick=()=>{bw=bw.filter(b=>b.id!==en.id);save(K_BW,bw);renderBody();toast("Entry deleted");pushCloud();bwChangedAt=Date.now();};
     ul.appendChild(li);
   });
 }
@@ -1088,22 +1098,7 @@ async function pushCloud(){
 
 async function pullCloud(){
   if(!session)return;
-  // device already has data — push it, don't pull (prevents cloud clobbering local)
-  if(logs.length>0){pushCloud();return;}
-  // genuinely empty device (new phone) — restore from cloud
-  setSyncStatus('busy');
-  try{
-    const r=await sbFetch(`/storage/v1/object/authenticated/${SB_BUCKET}/${session.user_id}/data.json`);
-    if(!r||r.status===404){setSyncStatus('ok');return;}
-    if(!r.ok){setSyncStatus('err');return;}
-    const d=await r.json();
-    if(d.logs)logs=d.logs;
-    if(d.bw)bw=d.bw;
-    if(d.feel)feel=d.feel;
-    if(d.routine&&typeof d.routine==='object'){ROUTINE=d.routine;save(K_ROUTINE,ROUTINE);}
-    save(K_LOGS,logs);save(K_BW,bw);save(K_FEEL,feel);
-    setSyncStatus('ok');
-  }catch{setSyncStatus('err');}
+  pushCloud(); // always push local state — cloud mirrors this device
 }
 
 async function signIn(name,pw){
@@ -1130,13 +1125,10 @@ document.getElementById('login-btn').onclick=async()=>{
   btn.textContent='Signing in…';btn.disabled=true;errEl.textContent='';
   try{
     await signIn(name,pw);
-    await pullCloud();
     hideLogin();
     day=Object.keys(ROUTINE)[0];activeGroup=null;activeLift=null;
     renderDaySeg();renderTrain();initFeelChips();popFeelChips();
-    const activeTab=document.querySelector('nav button.active');
-    if(activeTab&&activeTab.dataset.view==='progress')renderProgress();
-    if(activeTab&&activeTab.dataset.view==='body')renderBody();
+    pushCloud();
   }catch(e){errEl.textContent=e.message||'Sign in failed';}
   btn.textContent='Sign in';btn.disabled=false;
 };
@@ -1177,7 +1169,7 @@ document.querySelectorAll(".outfit-chip").forEach(chip=>{
 renderDaySeg();renderTrain();initFeelChips();popFeelChips();
 $("#train-date").addEventListener("change",initFeelChips);
 if(!session){showLogin();}
-else{setSyncStatus('ok');pullCloud().then(()=>{day=Object.keys(ROUTINE)[0];renderDaySeg();renderTrain();initFeelChips();}).catch(()=>{});}
+else{setSyncStatus('ok');pushCloud();}
 
 </script>
 </body>
